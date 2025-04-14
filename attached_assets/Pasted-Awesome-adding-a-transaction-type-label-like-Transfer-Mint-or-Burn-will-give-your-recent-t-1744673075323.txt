@@ -1,0 +1,94 @@
+Awesome — adding a transaction type label like "Transfer", "Mint", or "Burn" will give your recent transactions list way more context. Let’s break down how to do that accurately for PYUSD:
+
+⸻
+
+🎯 Goal:
+
+For each recent PYUSD transaction, tag it as:
+	•	🔁 "Transfer" – regular user-to-user transfer
+	•	🌱 "Mint" – new PYUSD created (from 0x000...0)
+	•	🔥 "Burn" – PYUSD destroyed (sent to 0x000...0)
+
+⸻
+
+✅ Strategy:
+
+PYUSD is an ERC-20 token, so everything goes through Transfer events:
+
+event Transfer(address indexed from, address indexed to, uint256 value)
+
+You can infer the type based on:
+
+Type	Condition
+Mint	from == 0x0000000000000000000000000000000000000000
+Burn	to == 0x0000000000000000000000000000000000000000
+Transfer	Neither from nor to is the zero address
+
+
+
+⸻
+
+🧠 Modify BigQuery Query to Add Type Label:
+
+SELECT 
+  transaction_hash,
+  LOWER(SUBSTR(topics[1], 27)) AS from_address,
+  LOWER(SUBSTR(topics[2], 27)) AS to_address,
+  SAFE_CAST(CONCAT('0x', SUBSTR(data, 3)) AS BIGNUMERIC) / 1e6 AS amount,
+  block_timestamp,
+  CASE
+    WHEN LOWER(SUBSTR(topics[1], 27)) = '0000000000000000000000000000000000000000' THEN 'Mint'
+    WHEN LOWER(SUBSTR(topics[2], 27)) = '0000000000000000000000000000000000000000' THEN 'Burn'
+    ELSE 'Transfer'
+  END AS tx_type
+FROM `bigquery-public-data.crypto_ethereum.logs`
+WHERE address = '0x6c3ea9036406852006290770bedfcaba0e23a0e8'
+  AND topics[0] = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
+ORDER BY block_timestamp DESC
+LIMIT 5
+
+
+
+⸻
+
+📦 Response JSON Example
+
+[
+  {
+    "transaction_hash": "0xabc...",
+    "from_address": "0x123...",
+    "to_address": "0x456...",
+    "amount": 27.50,
+    "tx_type": "Transfer",
+    "block_timestamp": "2025-04-14T22:45:12Z"
+  }
+]
+
+
+
+⸻
+
+🖥️ Frontend UI Label Example
+
+<p><strong>Type:</strong> 
+  <span className={
+    tx.tx_type === 'Mint' ? 'text-green-500' :
+    tx.tx_type === 'Burn' ? 'text-red-500' :
+    'text-blue-500'
+  }>
+    {tx.tx_type}
+  </span>
+</p>
+
+
+
+⸻
+
+✅ Summary
+	•	✅ Use the topics[1] and topics[2] values to detect Mint/Burn/Transfer
+	•	✅ Add tx_type in SQL (or backend)
+	•	✅ Color code it in frontend (optional but clean)
+
+⸻
+
+Would you like me to build this into your /api/recent-transactions endpoint or help wire it into your dashboard view?

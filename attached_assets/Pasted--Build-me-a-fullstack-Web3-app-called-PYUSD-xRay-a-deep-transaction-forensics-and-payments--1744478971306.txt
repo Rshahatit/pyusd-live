@@ -1,0 +1,90 @@
+🛠️ Build me a fullstack Web3 app called **PYUSD xRay** — a deep transaction forensics and payments dashboard for the PayPal x Google Cloud Web3 Hackathon.
+
+🎯 **Inspiration and Goal**
+PYUSD xRay is a powerful developer + user tool that helps people:
+1. Understand what happens *under the hood* in any PYUSD transaction
+2. Send PYUSD payments easily using a gas-sponsoring relayer
+3. View real-time + historical stats on PYUSD's usage and behavior
+
+This project is inspired by tools like Tenderly, Etherscan’s debug traces, and UltraSound Money. Our tool takes advantage of **GCP’s free access to computationally expensive JSON-RPC methods** like `debug_traceTransaction`, `trace_block`, and `trace_transaction`. These are normally expensive or restricted, but here we can use them to build something **no one else can** — deep insights into stablecoin usage and Ethereum internals.
+
+🏆 This is for a hackathon judged on:
+- **Innovation (40%)**: Use GCP’s advanced trace APIs in a creative, valuable way.
+- **Computational Complexity (25%)**: Leverage trace APIs like `debug_traceTransaction` and show why GCP makes this project possible.
+- **Functionality (20%)**: Demonstrate a working tool with real or testnet PYUSD transactions.
+- **Accessibility (10%)**: Make the UI clean, simple, and ideally deployable.
+- **Documentation (5%)**: Comment the code and write a good README scaffold.
+
+🧩 The MVP should include 3 modules:
+---
+
+### 🔍 Module 1: `TracePay` (Transaction Forensics)
+- Input: ETH tx hash
+- Fetch trace via `debug_traceTransaction` using GCP Blockchain RPC
+- Parse and display:
+  - Internal function calls and contract addresses
+  - Token movements (especially PYUSD transfers)
+  - Errors or failed calls
+  - Total gas used per subcall
+- Bonus: Highlight if MEV behavior (sandwiching, etc.) is suspected
+
+### 💸 Module 2: `PayLocal` (Gas-Sponsored Checkout)
+- Simple checkout UI (e.g., pay for coffee in PYUSD)
+- Uses PYUSD Faucet (for testnet)
+- Calls a mock smart contract with a relayer backend that:
+  - Accepts user tx request
+  - Signs and sends the tx on their behalf, paying gas
+- Monitor mempool gas prices (via `eth_feeHistory` or `eth_gasPrice`)
+- (Optional): Display ETA & gas savings if smart-timed
+
+### 📊 Module 3: `PYView` Dashboard
+- Show charts of:
+  - Top holders and contracts using PYUSD
+  - PYUSD issuance/burn rate (from contract events)
+  - Recent transaction activity
+- Use:
+  - Google BigQuery (for historical Ethereum data)
+  - GCP RPC (for real-time tx tracking)
+
+---
+
+🔧 Tech Stack:
+- Frontend: React + Tailwind (use `bolt.new` or Vite template)
+- Backend: Node.js + Express
+- Web3: ethers.js or viem
+- GCP RPC: Use `https://blockchain.google.com/rpc` endpoints
+- Deployment: Replit or GCP Cloud Run if needed
+
+📁 File Structure:
+/client
+/components
+/pages
+App.tsx
+…
+/server
+/routes
+trace.ts
+pay.ts
+dashboard.ts
+/utils
+gcpRpc.ts
+index.ts
+
+README.md
+.env.example
+📦 External Dependencies:
+- ethers or viem
+- axios
+- dotenv
+- chart.js or recharts
+- Tailwind
+- express
+- optionally: BigQuery client SDK (or dummy data to simulate)
+
+💡 Keep all endpoints, RPC keys, or addresses environment-driven (in `.env`)
+
+🔐 Assume this is being built for Ethereum Holesky Testnet (for ease of testing)
+
+---
+
+Generate starter code for this scaffolded fullstack dApp, with placeholder functions for each module. You don’t have to make it fully functional — just make sure it runs, compiles, and each route/component is scaffolded with clear comments and TODOs for where to add logic later.

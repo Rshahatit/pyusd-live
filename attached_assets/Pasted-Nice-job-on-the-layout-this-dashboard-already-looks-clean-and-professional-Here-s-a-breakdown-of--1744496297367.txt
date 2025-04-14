@@ -1,0 +1,119 @@
+Nice job on the layout — this dashboard already looks clean and professional. Here’s a breakdown of how to fetch the real data for each card using a mix of Google Cloud Blockchain RPC, BigQuery datasets, and optionally Portal + ethers.js if you’re interacting with testnet contracts.
+
+⸻
+
+📊 PYView Metrics – How to Get the Data
+
+1. 🟪 Total PYUSD Supply
+
+Goal: Get current total supply of PYUSD
+Method:
+	•	Use totalSupply() from the PYUSD ERC20 contract
+	•	Via eth_call to the contract address using GCP Blockchain RPC
+
+// With ethers.js or viem
+const abi = ["function totalSupply() view returns (uint256)"];
+const contract = new ethers.Contract(PYUSD_ADDRESS, abi, provider);
+const supply = await contract.totalSupply();
+
+Optional: Normalize using decimals() to convert to readable format (PYUSD uses 6 decimals)
+
+⸻
+
+2. 🟩 24h Transaction Volume
+
+Goal: Total amount of PYUSD transferred in the past 24h
+Method:
+	•	Query the ERC20 Transfer event logs via:
+	•	trace_block for recent blocks from GCP RPC (if staying on-chain only)
+	•	OR use BigQuery’s Ethereum logs dataset for historical events
+
+BigQuery SQL snippet (faster):
+
+SELECT SUM(CAST(data AS FLOAT64))/1e6 AS total_volume
+FROM `bigquery-public-data.crypto_ethereum.logs`
+WHERE address = '0x...PYUSDAddress'
+AND topics[0] = '0xddf252ad...TransferTopicHash'
+AND block_timestamp > TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 24 HOUR)
+
+
+
+⸻
+
+3. 🟨 Avg. Transaction Value
+
+Goal: Average size of a PYUSD transfer in the past 24h
+Method:
+Use the same query as above, but compute average:
+
+SELECT 
+  COUNT(*) AS tx_count,
+  SUM(CAST(data AS FLOAT64))/1e6 AS total_volume,
+  (SUM(CAST(data AS FLOAT64))/1e6)/COUNT(*) AS avg_tx_value
+FROM ...
+
+
+
+⸻
+
+4. 🟦 Active Wallets (24h)
+
+Goal: Number of unique addresses that sent or received PYUSD in last 24h
+Method:
+
+SELECT COUNT(DISTINCT from_address) + COUNT(DISTINCT to_address) AS active_wallets
+FROM (
+  SELECT 
+    SUBSTRING(topics[1], 27) AS from_address,
+    SUBSTRING(topics[2], 27) AS to_address
+  FROM `bigquery-public-data.crypto_ethereum.logs`
+  WHERE address = '0x...PYUSDAddress'
+    AND topics[0] = '0xddf252ad...'
+    AND block_timestamp > TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 24 HOUR)
+)
+
+
+
+⸻
+
+5. 📈 PYUSD Activity Chart (7D, 1M, etc.)
+
+Goal: Show bar chart of volume per day
+Method: Same table, grouped by day
+
+SELECT 
+  DATE(block_timestamp) AS date,
+  SUM(CAST(data AS FLOAT64))/1e6 AS volume
+FROM ...
+GROUP BY date
+ORDER BY date DESC
+LIMIT 30
+
+
+
+⸻
+
+⚙️ How to Connect This All
+
+Option A: Use BigQuery directly
+	•	Backend makes periodic queries to BigQuery API
+	•	Use Firebase functions, Node, or even Python with GCP SDK
+
+Option B: Mirror recent data from GCP RPC
+	•	Use trace_block + decode logs manually (less efficient for historical)
+	•	More suitable if you’re staying RPC-native
+
+⸻
+
+🚀 Fastest Setup Suggestion for Hackathon:
+	•	Use BigQuery for historical + daily rollups
+	•	Use GCP RPC (eth_call) for live contract state like totalSupply
+	•	Cache BigQuery results every hour in your backend or JSON file
+
+⸻
+
+If you want, I can:
+	•	Help set up a working BigQuery query and Node backend endpoint
+	•	Add mock data now so your charts and tiles look alive while you implement the real thing
+
+Want to go that route?

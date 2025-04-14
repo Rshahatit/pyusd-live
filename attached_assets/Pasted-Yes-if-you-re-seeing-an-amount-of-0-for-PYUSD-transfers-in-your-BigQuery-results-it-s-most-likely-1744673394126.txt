@@ -1,0 +1,76 @@
+Yes — if you’re seeing an amount of 0 for PYUSD transfers in your BigQuery results, it’s most likely due to the way you’re extracting and casting the data field, which contains the transferred amount in raw hex. Here’s how to fix that.
+
+⸻
+
+✅ Background: How ERC-20 Transfer Logs Work
+
+ERC-20 Transfer event:
+
+event Transfer(address indexed from, address indexed to, uint256 value)
+
+In logs:
+	•	topics[0] = event signature (always 0xddf252ad...)
+	•	topics[1] = from address (indexed)
+	•	topics[2] = to address (indexed)
+	•	data = value transferred (uint256, not indexed)
+
+⸻
+
+❌ Common Problem:
+
+If you try to cast data directly like this:
+
+CAST(data AS FLOAT64)
+
+It will fail or return 0 because:
+	•	data is a hex string like '0x0000000000000000000000000000000000000000000000000000000000002710' (which is 10000 in decimal)
+	•	BigQuery can’t directly cast that to a number — you need to convert from hex manually.
+
+⸻
+
+✅ Correct Way to Extract the Value
+
+Use SAFE_CAST + TO_HEX:
+
+SAFE_CAST(CONCAT('0x', SUBSTR(data, 3)) AS BIGNUMERIC) / 1e6 AS amount
+
+Or better:
+
+SAFE_CAST(FORMAT('%d', CAST(data AS STRING)) AS FLOAT64) / 1e6
+
+But the safest, and most direct fix is:
+
+SELECT
+  transaction_hash,
+  LOWER(SUBSTR(topics[1], 27)) AS from_address,
+  LOWER(SUBSTR(topics[2], 27)) AS to_address,
+  SAFE_CAST(FORMAT('%d', CAST(data AS STRING)) AS FLOAT64) / 1e6 AS amount,
+  block_timestamp
+FROM `bigquery-public-data.crypto_ethereum.logs`
+WHERE address = '0x6c3ea9036406852006290770bedfcaba0e23a0e8'
+  AND topics[0] = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
+ORDER BY block_timestamp DESC
+LIMIT 5
+
+You can also use this version if the above still causes 0s:
+
+SAFE_CAST(CAST(data AS STRING) AS FLOAT64) / 1e6
+
+
+
+⸻
+
+🧪 Debug It:
+
+Try selecting just the raw data value for a known transaction like this:
+
+SELECT 
+  data
+FROM `bigquery-public-data.crypto_ethereum.logs`
+WHERE transaction_hash = '0x...'
+
+Then convert it manually using parseInt('0x...', 16) or check via Etherscan.
+
+⸻
+
+Would you like me to help adjust the SQL for your backend route or validate with a real tx hash?
