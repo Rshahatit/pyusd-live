@@ -2,6 +2,8 @@
 
 ## Overview
 
+Check it out at [pyusd.live](pyusd.live)
+
 PYUSD xRay is a comprehensive fullstack Web3 dashboard that provides deep transaction forensics and payment capabilities for PayPal's stablecoin (PYUSD). Built for the PayPal x Google Cloud Web3 Hackathon, this application leverages Google Cloud's blockchain solutions to provide unprecedented visibility into PYUSD transactions, token metrics, and blockchain dynamics.
 
 ![PYUSD xRay Dashboard](https://example.com/placeholder-for-screenshot.png)
